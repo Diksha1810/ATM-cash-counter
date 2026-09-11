@@ -10,15 +10,17 @@ import {
   getPendingTransactions,
 } from './offlineDb';
 import { applyDispensation, findDispensation } from '../lib/dispensation';
+import { getIsOnline, setNetworkOnline } from '../utils/networkState';
 
 let syncInFlight = null;
 
 function isConnectivityError(error) {
-  if (!navigator.onLine) return true;
+  if (!getIsOnline()) return true;
   if (!error.status) return true;
   return (
     ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT', 'ERR_INTERNET_DISCONNECTED'].includes(error.code) ||
-    error.message === 'Network Error'
+    error.message === 'Network Error' ||
+    (error.message && error.message.includes('timeout'))
   );
 }
 
@@ -28,15 +30,19 @@ function createSyncId() {
 
 export const atmService = {
   async getInventory() {
-    if (!navigator.onLine) {
+    if (!getIsOnline()) {
       const cached = await getCachedInventory();
       if (cached) return cached;
     }
     try {
-      const data = await apiClient.get('/atm/inventory');
+      const data = await apiClient.get('/atm/inventory', { timeout: 3000 });
+      setNetworkOnline(true);
       await saveCachedInventory(data);
       return data;
     } catch (error) {
+      if (isConnectivityError(error)) {
+        setNetworkOnline(false);
+      }
       const cached = await getCachedInventory();
       if (cached) return cached;
       throw error;
@@ -90,17 +96,22 @@ export const atmService = {
       };
     };
 
-    if (!navigator.onLine) return queueWithdrawal(await getCachedInventory());
+    if (!getIsOnline()) return queueWithdrawal(await getCachedInventory());
 
     try {
-      const data = await apiClient.post('/atm/withdraw', { amount, syncId });
+      // 2.5 second timeout so turning off data falls back to offline queueing promptly
+      const data = await apiClient.post('/atm/withdraw', { amount, syncId }, { timeout: 2500 });
+      setNetworkOnline(true);
       if (data?.transaction) {
-        const updatedInv = await apiClient.get('/atm/inventory');
-        await saveCachedInventory(updatedInv);
+        apiClient
+          .get('/atm/inventory', { timeout: 2000 })
+          .then((updatedInv) => saveCachedInventory(updatedInv))
+          .catch(() => {});
       }
       return data;
     } catch (error) {
       if (isConnectivityError(error)) {
+        setNetworkOnline(false);
         return queueWithdrawal(await getCachedInventory());
       }
       throw error;
@@ -111,33 +122,45 @@ export const atmService = {
     if (syncInFlight) return syncInFlight;
 
     syncInFlight = (async () => {
-      if (!navigator.onLine) return null;
+      if (!getIsOnline()) return null;
       const pending = await getPendingWithdrawals();
       if (!pending || pending.length === 0) return null;
 
-      const response = await apiClient.post('/atm/sync', {
-        transactions: pending.map((p) => ({
-          syncId: p.syncId,
-          amount: p.amount,
-        })),
-      });
+      try {
+        const response = await apiClient.post(
+          '/atm/sync',
+          {
+            transactions: pending.map((p) => ({
+              syncId: p.syncId,
+              amount: p.amount,
+            })),
+          },
+          { timeout: 6000 }
+        );
 
-      for (const res of response.results || []) {
-        if (res.status === 'SYNCED') {
-          await removePendingWithdrawal(res.syncId);
-        } else {
-          await updatePendingWithdrawal(res.syncId, {
-            status: res.status,
-            error: res.message,
-          });
+        setNetworkOnline(true);
+        for (const res of response.results || []) {
+          if (res.status === 'SYNCED') {
+            await removePendingWithdrawal(res.syncId);
+          } else {
+            await updatePendingWithdrawal(res.syncId, {
+              status: res.status,
+              error: res.message,
+            });
+          }
         }
-      }
 
-      if (response.inventory) {
-        await saveCachedInventory(response.inventory);
-      }
+        if (response.inventory) {
+          await saveCachedInventory(response.inventory);
+        }
 
-      return response;
+        return response;
+      } catch (err) {
+        if (isConnectivityError(err)) {
+          setNetworkOnline(false);
+        }
+        throw err;
+      }
     })();
 
     try {

@@ -1,32 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { getIsOnline, subscribeNetworkStatus } from '../utils/networkState';
 
 export function useOfflineSync(onOnlineSync) {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(getIsOnline);
+  const prevOnlineRef = useRef(isOnline);
+  const onSyncRef = useRef(onOnlineSync);
 
   useEffect(() => {
-    function handleOnline() {
-      setIsOnline(true);
-      if (typeof onOnlineSync === 'function') {
-        onOnlineSync().catch(() => {});
-      }
-    }
-
-    function handleOffline() {
-      setIsOnline(false);
-    }
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    if (navigator.onLine && typeof onOnlineSync === 'function') {
-      onOnlineSync().catch(() => {});
-    }
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    onSyncRef.current = onOnlineSync;
   }, [onOnlineSync]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeNetworkStatus((online) => {
+      const wasOffline = !prevOnlineRef.current;
+      prevOnlineRef.current = online;
+      setIsOnline(online);
+
+      // When transitioning from offline back to online, trigger auto-sync
+      if (online && wasOffline && typeof onSyncRef.current === 'function') {
+        onSyncRef.current().catch(() => {});
+      }
+    });
+
+    // Initial check on mount
+    if (getIsOnline() && typeof onSyncRef.current === 'function') {
+      onSyncRef.current().catch(() => {});
+    }
+
+    return unsubscribe;
+  }, []);
 
   return { isOnline };
 }

@@ -1,12 +1,13 @@
 import axios from 'axios';
 import { QUERY_KEYS } from '../utils/constants';
+import { setNetworkOnline } from '../utils/networkState';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
-  timeout: 8000,
+  timeout: 4000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,10 +27,18 @@ export function attachQueryClient(qc) {
 const SILENT_401_ROUTES = ['/auth/me', '/auth/login', '/auth/register'];
 
 apiClient.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    setNetworkOnline(true);
+    return response.data;
+  },
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || '';
+
+    // If there is no HTTP status, the network request failed to connect
+    if (!status) {
+      setNetworkOnline(false);
+    }
 
     const isSilent = SILENT_401_ROUTES.some((route) => url.includes(route));
 
