@@ -14,7 +14,12 @@ import { applyDispensation, findDispensation } from '../lib/dispensation';
 let syncInFlight = null;
 
 function isConnectivityError(error) {
-  return !error.status && ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT'].includes(error.code);
+  if (!navigator.onLine) return true;
+  if (!error.status) return true;
+  return (
+    ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT', 'ERR_INTERNET_DISCONNECTED'].includes(error.code) ||
+    error.message === 'Network Error'
+  );
 }
 
 function createSyncId() {

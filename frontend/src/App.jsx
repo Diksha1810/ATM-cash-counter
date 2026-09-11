@@ -7,6 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { attachQueryClient } from './services/apiClient';
 import { AuthProvider } from './context/AuthContext';
 import { AppRoutes } from './routes/AppRoutes';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles.css';
 
 const queryClient = new QueryClient({
@@ -49,7 +50,9 @@ export default function App() {
       <ConfigProvider theme={themeConfig}>
         <BrowserRouter>
           <AuthProvider>
-            <AppRoutes />
+            <ErrorBoundary>
+              <AppRoutes />
+            </ErrorBoundary>
             <ToastContainer
               position="top-right"
               autoClose={3500}

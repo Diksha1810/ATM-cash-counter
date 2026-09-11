@@ -44,6 +44,7 @@ app.use(
     rolling: true,
     store: MongoStore.create({
       mongoUrl: mongoUri,
+      ttl: 7 * 24 * 60 * 60,
       mongoOptions: {
         serverSelectionTimeoutMS: 5000,
       },
@@ -52,7 +53,7 @@ app.use(
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
-      maxAge: 10 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     },
   })
 );

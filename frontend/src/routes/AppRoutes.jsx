@@ -1,17 +1,12 @@
-import React, { lazy } from 'react';
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Loadable from '../utils/Loadable';
-
-// Lazy-loaded page components with Loadable HOC
-const LoginPage = Loadable(lazy(() => import('../pages/LoginPage')));
-const RegisterPage = Loadable(lazy(() => import('../pages/RegisterPage')));
-const DashboardPage = Loadable(lazy(() => import('../pages/DashboardPage')));
-const TransactionsPage = Loadable(lazy(() => import('../pages/TransactionsPage')));
-const NotFoundPage = Loadable(lazy(() => import('../pages/NotFoundPage')));
-
-// Layout wrappers
-const ProtectedLayout = Loadable(lazy(() => import('../layouts/ProtectedLayout')));
-const PublicLayout = Loadable(lazy(() => import('../layouts/PublicLayout')));
+import LoginPage from '../pages/LoginPage';
+import RegisterPage from '../pages/RegisterPage';
+import DashboardPage from '../pages/DashboardPage';
+import TransactionsPage from '../pages/TransactionsPage';
+import NotFoundPage from '../pages/NotFoundPage';
+import ProtectedLayout from '../layouts/ProtectedLayout';
+import PublicLayout from '../layouts/PublicLayout';
 
 export function AppRoutes() {
   return (
