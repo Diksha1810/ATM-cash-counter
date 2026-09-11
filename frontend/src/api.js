@@ -1,0 +1,2 @@
+const API=import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+export async function api(path,options={}){const res=await fetch(`${API}${path}`,{credentials:'include',headers:{'Content-Type':'application/json',...(options.headers||{})},...options});let data={};try{data=await res.json()}catch{}if(!res.ok)throw Object.assign(new Error(data.message||'Request failed'),{status:res.status,data});return data}
