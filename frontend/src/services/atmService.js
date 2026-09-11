@@ -14,6 +14,20 @@ import { getIsOnline, setNetworkOnline, subscribeNetworkStatus } from '../utils/
 
 let syncInFlight = null;
 
+function withTimeout(promise, timeoutMs, onTimeout) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      onTimeout();
+      const error = new Error('The server did not respond in time.');
+      error.code = 'ECONNABORTED';
+      reject(error);
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 function isConnectivityError(error) {
   // Always check live browser state first
   if (!navigator.onLine || !getIsOnline()) return true;
@@ -109,10 +123,14 @@ export const atmService = {
 
     try {
       // Abort an in-flight request as soon as the browser reports that the network is offline.
-      const data = await apiClient.post(
-        '/atm/withdraw',
-        { amount, syncId },
-        { timeout: 2500, signal: requestController.signal }
+      const data = await withTimeout(
+        apiClient.post(
+          '/atm/withdraw',
+          { amount, syncId },
+          { timeout: 2500, signal: requestController.signal }
+        ),
+        2500,
+        () => requestController.abort()
       );
       setNetworkOnline(true);
       if (data?.transaction) {
