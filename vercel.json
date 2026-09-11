@@ -17,6 +17,12 @@
       }
     },
     {
+      "source": "/(login|register|dashboard|transactions)(/.*)?",
+      "destination": {
+        "service": "frontend"
+      }
+    },
+    {
       "source": "/(.*)",
       "destination": {
         "service": "frontend"
