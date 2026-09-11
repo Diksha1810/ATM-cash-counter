@@ -15,8 +15,12 @@ import { getIsOnline, setNetworkOnline } from '../utils/networkState';
 let syncInFlight = null;
 
 function isConnectivityError(error) {
-  if (!getIsOnline()) return true;
+  // Always check live browser state first
+  if (!navigator.onLine || !getIsOnline()) return true;
+  // No HTTP status means network layer failed (DNS, TCP, TLS)
   if (!error.status) return true;
+  // 408 was previously returned by our own service worker for offline assets
+  if (error.status === 408) return true;
   return (
     ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT', 'ERR_INTERNET_DISCONNECTED'].includes(error.code) ||
     error.message === 'Network Error' ||

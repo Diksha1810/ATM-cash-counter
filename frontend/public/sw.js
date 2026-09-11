@@ -1,4 +1,4 @@
-const CACHE = 'atm-shell-v5';
+const CACHE = 'atm-shell-v6';
 const APP_SHELL = ['/', '/index.html'];
 
 self.addEventListener('install', (event) => {
@@ -46,10 +46,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Only intercept same-origin GET requests for static assets & navigation
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // Never intercept API requests or external origins
+  // Never intercept API requests, external origins, or non-GET
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
   // SPA Navigation requests (HTML pages)
@@ -89,7 +90,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static Assets (JS, CSS, images, fonts)
+  // Static Assets (JS, CSS, images, fonts) — cache-first, network fallback
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -104,18 +105,17 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
 
-      // If not in cache, fetch from network and save to cache
-      return fetch(event.request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.ok) {
-            const copy = networkResponse.clone();
-            caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          return new Response('', { status: 408, statusText: 'Request timed out or offline' });
-        });
+      // Not in cache — fetch from network.
+      // IMPORTANT: Do NOT catch here; let network errors propagate naturally.
+      // Catching and returning a fake Response (like 408) breaks Axios error detection
+      // because Axios would see a successful HTTP response instead of a network error.
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.ok) {
+          const copy = networkResponse.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, copy));
+        }
+        return networkResponse;
+      });
     })
   );
 });
