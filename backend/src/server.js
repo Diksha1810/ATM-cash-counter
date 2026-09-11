@@ -52,6 +52,16 @@ app.use(
   })
 );
 
+// Ensure database connection for all requests (serverless & local)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Mount API routes
 app.use('/api', routes);
 
@@ -65,9 +75,7 @@ if (require.main === module) {
       console.error(e);
       process.exit(1);
     });
-} else {
-  module.exports = async (req, res) => {
-    await connectDB();
-    return app(req, res);
-  };
 }
+
+module.exports = app;
+
