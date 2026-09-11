@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Form, Input, Button, Typography, Divider } from 'antd';
-import { MailOutlined, LockOutlined, UserAddOutlined } from '@ant-design/icons';
+import { MailOutlined, LockOutlined, BankOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { useFormik } from 'formik';
 import { registerSchema } from '../validations/authSchema';
@@ -50,11 +50,11 @@ export function RegisterPage() {
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <UserAddOutlined style={{ fontSize: 42, color: '#52c41a', marginBottom: 12 }} />
+          <BankOutlined style={{ fontSize: 42, color: '#1677ff', marginBottom: 12 }} />
           <Title level={2} style={{ margin: 0, fontWeight: 700 }}>
-            Create Account
+            ATM Cash Counter
           </Title>
-          <Text type="secondary">Sign up to access the ATM management console</Text>
+          <Text type="secondary">Create an account to manage cash inventory & dispensations</Text>
         </div>
 
         <form onSubmit={formik.handleSubmit}>
@@ -114,15 +114,9 @@ export function RegisterPage() {
             size="large"
             block
             loading={isRegistering}
-            style={{
-              height: 46,
-              fontSize: 16,
-              fontWeight: 600,
-              background: '#52c41a',
-              marginBottom: 12,
-            }}
+            style={{ height: 46, fontSize: 16, fontWeight: 600, marginBottom: 12 }}
           >
-            Register
+            Create Account
           </Button>
         </form>
 
