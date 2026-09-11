@@ -44,12 +44,14 @@ export function DashboardPage() {
         throw err;
       }
     },
+    networkMode: 'always',
     staleTime: 30 * 1000,
   });
 
   const { data: pendingTransactions = [] } = useQuery({
     queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS],
     queryFn: atmService.getPendingTransactions,
+    networkMode: 'always',
   });
 
   return (

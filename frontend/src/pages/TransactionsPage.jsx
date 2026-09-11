@@ -31,12 +31,14 @@ export function TransactionsPage() {
         throw error;
       }
     },
+    networkMode: 'always',
     staleTime: 10 * 1000,
   });
 
   const { data: pendingTransactions = [], isLoading: isLoadingPending } = useQuery({
     queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS],
     queryFn: atmService.getPendingTransactions,
+    networkMode: 'always',
   });
 
   const transactions = [...pendingTransactions, ...(data?.items || [])];

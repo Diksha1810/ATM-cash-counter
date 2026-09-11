@@ -15,6 +15,7 @@ export function useATM() {
     queryKey: [QUERY_KEYS.INVENTORY],
     queryFn: atmService.getInventory,
     enabled: isAuthenticated,
+    networkMode: 'always',
     staleTime: 30 * 1000,
   });
 
@@ -22,12 +23,14 @@ export function useATM() {
     queryKey: [QUERY_KEYS.PENDING_COUNT],
     queryFn: atmService.getPendingCount,
     enabled: isAuthenticated,
+    networkMode: 'always',
     refetchInterval: 5000,
   });
 
   const withdrawMutation = useMutation({
     mutationKey: [MUTATION_KEYS.WITHDRAW],
     mutationFn: (amount) => atmService.withdraw(amount),
+    networkMode: 'always',
     onSuccess: (data) => {
       if (data.isOffline) {
         if (data.inventory) {
@@ -59,6 +62,7 @@ export function useATM() {
   const syncMutation = useMutation({
     mutationKey: [MUTATION_KEYS.SYNC_PENDING],
     mutationFn: atmService.syncPendingWithdrawals,
+    networkMode: 'always',
     onSuccess: (data) => {
       if (data) {
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVENTORY] });
