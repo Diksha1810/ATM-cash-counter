@@ -19,7 +19,8 @@
     {
       "source": "/(login|register|dashboard|transactions)(/.*)?",
       "destination": {
-        "service": "frontend"
+        "service": "frontend",
+        "path": "/index.html"
       }
     },
     {

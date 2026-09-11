@@ -1,4 +1,4 @@
-const CACHE = 'atm-shell-v4';
+const CACHE = 'atm-shell-v5';
 const APP_SHELL = ['/', '/index.html'];
 
 self.addEventListener('install', (event) => {
@@ -56,15 +56,20 @@ self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
+        .then(async (response) => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(CACHE).then((cache) => {
-              cache.put(event.request, copy.clone());
-              cache.put('/index.html', copy);
-            });
+            const cache = await caches.open(CACHE);
+            await cache.put(event.request, copy.clone());
+            await cache.put('/index.html', copy);
+            return response;
           }
-          return response;
+          // Server returned non-200 (e.g. 404 on direct route refresh) -> serve cached index.html
+          const cached =
+            (await caches.match(event.request)) ||
+            (await caches.match('/index.html')) ||
+            (await caches.match('/'));
+          return cached || response;
         })
         .catch(async () => {
           const cached =
