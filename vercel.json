@@ -17,13 +17,6 @@
       }
     },
     {
-      "source": "/(login|register|dashboard|transactions)(/.*)?",
-      "destination": {
-        "service": "frontend",
-        "path": "/index.html"
-      }
-    },
-    {
       "source": "/(.*)",
       "destination": {
         "service": "frontend"
