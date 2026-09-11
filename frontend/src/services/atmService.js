@@ -10,22 +10,9 @@ import {
   getPendingTransactions,
 } from './offlineDb';
 import { applyDispensation, findDispensation } from '../lib/dispensation';
-import { getIsOnline, setNetworkOnline } from '../utils/networkState';
+import { getIsOnline, setNetworkOnline, subscribeNetworkStatus } from '../utils/networkState';
 
 let syncInFlight = null;
-
-function withTimeout(promise, timeoutMs) {
-  let timeoutId;
-  const timeout = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => {
-      const error = new Error('The server did not respond in time.');
-      error.code = 'ECONNABORTED';
-      reject(error);
-    }, timeoutMs);
-  });
-
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
-}
 
 function isConnectivityError(error) {
   // Always check live browser state first
@@ -35,7 +22,7 @@ function isConnectivityError(error) {
   // 408 was previously returned by our own service worker for offline assets
   if (error.status === 408) return true;
   return (
-    ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT', 'ERR_INTERNET_DISCONNECTED'].includes(error.code) ||
+    ['ERR_NETWORK', 'ERR_CANCELED', 'ECONNABORTED', 'ETIMEDOUT', 'ERR_INTERNET_DISCONNECTED'].includes(error.code) ||
     error.message === 'Network Error' ||
     (error.message && error.message.includes('timeout'))
   );
@@ -113,17 +100,19 @@ export const atmService = {
       };
     };
 
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setNetworkOnline(false);
-      return queueWithdrawal(await getCachedInventory());
-    }
     if (!getIsOnline()) return queueWithdrawal(await getCachedInventory());
 
+    const requestController = new AbortController();
+    const unsubscribeNetwork = subscribeNetworkStatus((online) => {
+      if (!online) requestController.abort();
+    });
+
     try {
-      // 2.5 second timeout so turning off data falls back to offline queueing promptly
-      const data = await withTimeout(
-        apiClient.post('/atm/withdraw', { amount, syncId }, { timeout: 2000 }),
-        2500
+      // Abort an in-flight request as soon as the browser reports that the network is offline.
+      const data = await apiClient.post(
+        '/atm/withdraw',
+        { amount, syncId },
+        { timeout: 2500, signal: requestController.signal }
       );
       setNetworkOnline(true);
       if (data?.transaction) {
@@ -139,6 +128,8 @@ export const atmService = {
         return queueWithdrawal(await getCachedInventory());
       }
       throw error;
+    } finally {
+      unsubscribeNetwork();
     }
   },
 
