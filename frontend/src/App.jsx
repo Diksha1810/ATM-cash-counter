@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ConfigProvider } from 'antd';
 import { ToastContainer } from 'react-toastify';
@@ -47,7 +47,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfigProvider theme={themeConfig}>
-        <BrowserRouter>
+        <HashRouter>
           <AuthProvider>
             <AppRoutes />
             <ToastContainer
@@ -63,7 +63,7 @@ export default function App() {
               theme="light"
             />
           </AuthProvider>
-        </BrowserRouter>
+        </HashRouter>
       </ConfigProvider>
     </QueryClientProvider>
   );

@@ -36,8 +36,8 @@ apiClient.interceptors.response.use(
       if (_queryClient) {
         _queryClient.clear();
       }
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.replace('/login');
+      if (!window.location.hash.includes('login') && !window.location.pathname.startsWith('/login')) {
+        window.location.hash = '#/login';
       }
       return Promise.reject(new Error('Session expired. Please log in again.'));
     }
