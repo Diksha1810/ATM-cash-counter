@@ -41,8 +41,8 @@ apiClient.interceptors.response.use(
         _queryClient.removeQueries({ queryKey: [QUERY_KEYS.PENDING_COUNT] });
         _queryClient.removeQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
       }
-      if (!window.location.hash.includes('login') && !window.location.pathname.startsWith('/login')) {
-        window.location.hash = '#/login';
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.assign('/login');
       }
       return Promise.reject(new Error('Session expired. Please log in again.'));
     }

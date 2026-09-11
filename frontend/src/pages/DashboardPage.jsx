@@ -12,6 +12,7 @@ import { TransactionTable } from '../components/TransactionTable';
 import { useQuery } from '@tanstack/react-query';
 import { transactionService } from '../services/transactionService';
 import { QUERY_KEYS } from '../utils/constants';
+import { atmService } from '../services/atmService';
 
 const { Content } = Layout;
 const { Title, Text } = Typography;
@@ -37,6 +38,11 @@ export function DashboardPage() {
     queryKey: [QUERY_KEYS.TRANSACTIONS, 1, 5],
     queryFn: () => transactionService.getTransactions(1, 5),
     staleTime: 30 * 1000,
+  });
+
+  const { data: pendingTransactions = [] } = useQuery({
+    queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS],
+    queryFn: atmService.getPendingTransactions,
   });
 
   return (
@@ -100,7 +106,7 @@ export function DashboardPage() {
       </Row>
 
       <TransactionTable
-        transactions={txData?.items || []}
+        transactions={[...pendingTransactions, ...(txData?.items || [])].slice(0, 5)}
         isLoading={isLoadingTx}
         title="Recent Dispensations (Last 5)"
       />

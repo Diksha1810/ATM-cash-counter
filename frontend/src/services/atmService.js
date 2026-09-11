@@ -7,7 +7,9 @@ import {
   removePendingWithdrawal,
   updatePendingWithdrawal,
   getPendingCount,
+  getPendingTransactions,
 } from './offlineDb';
+import { applyDispensation, findDispensation } from '../lib/dispensation';
 
 let syncInFlight = null;
 
@@ -34,20 +36,21 @@ export const atmService = {
 
   async withdraw(amount, syncId = createSyncId()) {
     const queueWithdrawal = async (cached) => {
-      if (!cached || amount > cached.balance) {
-        throw new Error('Offline withdrawal exceeds known ATM balance.');
+      const notes = cached && findDispensation(amount, cached.denominations);
+      if (!cached || !notes) {
+        throw new Error('This amount cannot be dispensed from the cached ATM notes.');
       }
       const queuedItem = {
         syncId,
         amount,
+        dispensedNotes: notes,
+        balanceBefore: cached.balance,
+        balanceAfter: cached.balance - amount,
         createdAt: Date.now(),
         status: 'PENDING',
       };
       await queueOfflineWithdrawal(queuedItem);
-      const optimistic = {
-        ...cached,
-        balance: cached.balance - amount,
-      };
+      const optimistic = applyDispensation(cached, notes);
       await saveCachedInventory(optimistic);
       return {
         isOffline: true,
@@ -55,7 +58,7 @@ export const atmService = {
           _id: syncId,
           amount,
           status: 'PENDING',
-          dispensedNotes: [],
+          dispensedNotes: notes,
           balanceBefore: cached.balance,
           balanceAfter: optimistic.balance,
           createdAt: new Date().toISOString(),
@@ -122,5 +125,9 @@ export const atmService = {
 
   async getPendingCount() {
     return await getPendingCount();
+  },
+
+  async getPendingTransactions() {
+    return await getPendingTransactions();
   },
 };

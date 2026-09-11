@@ -6,6 +6,7 @@ export const QUERY_KEYS = {
   AUTH_USER: 'authUser',
   INVENTORY: 'inventory',
   PENDING_COUNT: 'pendingCount',
+  PENDING_TRANSACTIONS: 'pendingTransactions',
   TRANSACTIONS: 'transactions',
 };
 

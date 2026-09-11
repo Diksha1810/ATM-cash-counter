@@ -7,7 +7,7 @@ export function useOfflineSync(onOnlineSync) {
     function handleOnline() {
       setIsOnline(true);
       if (typeof onOnlineSync === 'function') {
-        onOnlineSync();
+        onOnlineSync().catch(() => {});
       }
     }
 

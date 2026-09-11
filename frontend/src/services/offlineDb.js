@@ -66,3 +66,16 @@ export async function getPendingCount() {
   const db = await dbPromise;
   return await db.count('pending');
 }
+
+export async function getPendingTransactions() {
+  const pending = await getPendingWithdrawals();
+  return pending.map((item) => ({
+    _id: item.syncId,
+    amount: item.amount,
+    status: item.status || 'PENDING',
+    dispensedNotes: item.dispensedNotes || [],
+    balanceBefore: item.balanceBefore,
+    balanceAfter: item.balanceAfter,
+    createdAt: item.createdAt,
+  }));
+}

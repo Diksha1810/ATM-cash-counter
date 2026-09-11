@@ -4,6 +4,8 @@ import { ArrowLeftOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { transactionService } from '../services/transactionService';
+import { atmService } from '../services/atmService';
+import { QUERY_KEYS } from '../utils/constants';
 import { TransactionTable } from '../components/TransactionTable';
 
 const { Content } = Layout;
@@ -20,10 +22,24 @@ export function TransactionsPage() {
     refetch,
     isFetching,
   } = useQuery({
-    queryKey: ['transactions', page, pageSize],
-    queryFn: () => transactionService.getTransactions(page, pageSize),
+    queryKey: [QUERY_KEYS.TRANSACTIONS, page, pageSize],
+    queryFn: async () => {
+      try {
+        return await transactionService.getTransactions(page, pageSize);
+      } catch (error) {
+        if (!navigator.onLine) return { items: [], total: 0 };
+        throw error;
+      }
+    },
     staleTime: 10 * 1000,
   });
+
+  const { data: pendingTransactions = [], isLoading: isLoadingPending } = useQuery({
+    queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS],
+    queryFn: atmService.getPendingTransactions,
+  });
+
+  const transactions = [...pendingTransactions, ...(data?.items || [])];
 
   return (
     <Content style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px', width: '100%' }}>
@@ -65,13 +81,13 @@ export function TransactionsPage() {
       </div>
 
       <TransactionTable
-        transactions={data?.items || []}
-        total={data?.total || 0}
+        transactions={transactions}
+        total={(data?.total || 0) + pendingTransactions.length}
         page={page}
         pageSize={pageSize}
         onPageChange={(newPage) => setPage(newPage)}
-        isLoading={isLoading}
-        title={`All Recorded Transactions (${data?.total || 0})`}
+        isLoading={isLoading || isLoadingPending}
+        title={`All Recorded Transactions (${(data?.total || 0) + pendingTransactions.length})`}
       />
     </Content>
   );

@@ -31,6 +31,7 @@ export function useATM() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVENTORY] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_COUNT] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS] });
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
 
       if (data.isOffline) {
@@ -56,6 +57,7 @@ export function useATM() {
       if (data) {
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVENTORY] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_COUNT] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS] });
         queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
 
         const syncedCount = data.results?.filter((r) => r.status === 'SYNCED').length || 0;
