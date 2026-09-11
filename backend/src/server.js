@@ -42,7 +42,12 @@ app.use(
     resave: false,
     saveUninitialized: false,
     rolling: true,
-    store: MongoStore.create({ mongoUrl: mongoUri }),
+    store: MongoStore.create({
+      mongoUrl: mongoUri,
+      mongoOptions: {
+        serverSelectionTimeoutMS: 5000,
+      },
+    }),
     cookie: {
       httpOnly: true,
       secure: isProduction,
