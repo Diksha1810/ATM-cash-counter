@@ -9,6 +9,16 @@ import {
   getPendingCount,
 } from './offlineDb';
 
+let syncInFlight = null;
+
+function isConnectivityError(error) {
+  return !error.status && ['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT'].includes(error.code);
+}
+
+function createSyncId() {
+  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 export const atmService = {
   async getInventory() {
     try {
@@ -22,9 +32,8 @@ export const atmService = {
     }
   },
 
-  async withdraw(amount, syncId = crypto.randomUUID()) {
-    if (!navigator.onLine) {
-      const cached = await getCachedInventory();
+  async withdraw(amount, syncId = createSyncId()) {
+    const queueWithdrawal = async (cached) => {
       if (!cached || amount > cached.balance) {
         throw new Error('Offline withdrawal exceeds known ATM balance.');
       }
@@ -52,46 +61,63 @@ export const atmService = {
           createdAt: new Date().toISOString(),
         },
       };
-    }
+    };
 
-    const data = await apiClient.post('/atm/withdraw', { amount, syncId });
-    if (data?.transaction) {
-      const updatedInv = await apiClient.get('/atm/inventory');
-      await saveCachedInventory(updatedInv);
+    if (!navigator.onLine) return queueWithdrawal(await getCachedInventory());
+
+    try {
+      const data = await apiClient.post('/atm/withdraw', { amount, syncId });
+      if (data?.transaction) {
+        const updatedInv = await apiClient.get('/atm/inventory');
+        await saveCachedInventory(updatedInv);
+      }
+      return data;
+    } catch (error) {
+      if (isConnectivityError(error)) {
+        return queueWithdrawal(await getCachedInventory());
+      }
+      throw error;
     }
-    return data;
   },
 
   async syncPendingWithdrawals() {
-    if (!navigator.onLine) return null;
-    const pending = await getPendingWithdrawals();
-    if (!pending || pending.length === 0) return null;
+    if (syncInFlight) return syncInFlight;
 
-    const payload = {
-      transactions: pending.map((p) => ({
-        syncId: p.syncId,
-        amount: p.amount,
-      })),
-    };
+    syncInFlight = (async () => {
+      if (!navigator.onLine) return null;
+      const pending = await getPendingWithdrawals();
+      if (!pending || pending.length === 0) return null;
 
-    const response = await apiClient.post('/atm/sync', payload);
+      const response = await apiClient.post('/atm/sync', {
+        transactions: pending.map((p) => ({
+          syncId: p.syncId,
+          amount: p.amount,
+        })),
+      });
 
-    for (const res of response.results || []) {
-      if (res.status === 'SYNCED') {
-        await removePendingWithdrawal(res.syncId);
-      } else {
-        await updatePendingWithdrawal(res.syncId, {
-          status: res.status,
-          error: res.message,
-        });
+      for (const res of response.results || []) {
+        if (res.status === 'SYNCED') {
+          await removePendingWithdrawal(res.syncId);
+        } else {
+          await updatePendingWithdrawal(res.syncId, {
+            status: res.status,
+            error: res.message,
+          });
+        }
       }
-    }
 
-    if (response.inventory) {
-      await saveCachedInventory(response.inventory);
-    }
+      if (response.inventory) {
+        await saveCachedInventory(response.inventory);
+      }
 
-    return response;
+      return response;
+    })();
+
+    try {
+      return await syncInFlight;
+    } finally {
+      syncInFlight = null;
+    }
   },
 
   async getPendingCount() {

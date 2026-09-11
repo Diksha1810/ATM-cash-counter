@@ -18,6 +18,10 @@ export function useOfflineSync(onOnlineSync) {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    if (navigator.onLine && typeof onOnlineSync === 'function') {
+      onOnlineSync().catch(() => {});
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);

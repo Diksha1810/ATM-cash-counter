@@ -1,4 +1,5 @@
 import React from 'react';
+import { Spin } from 'antd';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,9 +11,22 @@ export function PublicLayout() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Render the public page immediately — no blocking spinner.
-  // isLoading will be true briefly while getMe resolves, but we still show the page.
-  // If authenticated, the Navigate above will fire once isLoading becomes false.
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '100vh',
+          background: '#f5f7fa',
+        }}
+      >
+        <Spin size="large" tip="Checking session..." />
+      </div>
+    );
+  }
+
   return <Outlet />;
 }
 

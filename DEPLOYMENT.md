@@ -63,6 +63,11 @@ Before first use, populate the ATM cash inventory into MongoDB Atlas:
    - Your API will be live at `https://your-project.vercel.app/api`
    - Session cookies work seamlessly without third-party cookie restrictions!
 
+If the frontend and backend are deployed as separate Vercel projects, add
+`VITE_API_URL=https://<your-backend-domain>/api` to the frontend project's
+production environment variables and redeploy. The frontend defaults to
+`/api`, which only works when both services share the same domain.
+
 ---
 
 ## Step 4: Verify Live Application

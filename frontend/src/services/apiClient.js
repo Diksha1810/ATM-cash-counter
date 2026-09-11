@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { QUERY_KEYS } from '../utils/constants';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -31,10 +32,14 @@ apiClient.interceptors.response.use(
 
     const isSilent = SILENT_401_ROUTES.some((route) => url.includes(route));
 
-    // Session expired on a PROTECTED route → clear cache and redirect to login
+    // Session expired on a protected route: preserve the auth observer while
+    // removing protected data and explicitly marking the session as signed out.
     if (status === 401 && !isSilent) {
       if (_queryClient) {
-        _queryClient.clear();
+        _queryClient.setQueryData([QUERY_KEYS.AUTH_USER], null);
+        _queryClient.removeQueries({ queryKey: [QUERY_KEYS.INVENTORY] });
+        _queryClient.removeQueries({ queryKey: [QUERY_KEYS.PENDING_COUNT] });
+        _queryClient.removeQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
       }
       if (!window.location.hash.includes('login') && !window.location.pathname.startsWith('/login')) {
         window.location.hash = '#/login';
