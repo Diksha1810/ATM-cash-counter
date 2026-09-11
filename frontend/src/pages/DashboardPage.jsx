@@ -36,7 +36,14 @@ export function DashboardPage() {
 
   const { data: txData, isLoading: isLoadingTx } = useQuery({
     queryKey: [QUERY_KEYS.TRANSACTIONS, 1, 5],
-    queryFn: () => transactionService.getTransactions(1, 5),
+    queryFn: async () => {
+      try {
+        return await transactionService.getTransactions(1, 5);
+      } catch (err) {
+        if (!navigator.onLine) return { items: [], total: 0 };
+        throw err;
+      }
+    },
     staleTime: 30 * 1000,
   });
 

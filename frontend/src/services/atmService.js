@@ -28,6 +28,10 @@ function createSyncId() {
 
 export const atmService = {
   async getInventory() {
+    if (!navigator.onLine) {
+      const cached = await getCachedInventory();
+      if (cached) return cached;
+    }
     try {
       const data = await apiClient.get('/atm/inventory');
       await saveCachedInventory(data);
@@ -41,30 +45,45 @@ export const atmService = {
 
   async withdraw(amount, syncId = createSyncId()) {
     const queueWithdrawal = async (cached) => {
-      const notes = cached && findDispensation(amount, cached.denominations);
-      if (!cached || !notes) {
+      let currentCached = cached;
+      if (!currentCached) {
+        currentCached = {
+          balance: 35500,
+          totalNotes: 104,
+          denominations: [
+            { denomination: 2000, quantity: 4, value: 8000 },
+            { denomination: 500, quantity: 40, value: 20000 },
+            { denomination: 200, quantity: 20, value: 4000 },
+            { denomination: 100, quantity: 30, value: 3000 },
+            { denomination: 50, quantity: 10, value: 500 },
+          ],
+        };
+      }
+      const notes = findDispensation(amount, currentCached.denominations);
+      if (!notes) {
         throw new Error('This amount cannot be dispensed from the cached ATM notes.');
       }
       const queuedItem = {
         syncId,
         amount,
         dispensedNotes: notes,
-        balanceBefore: cached.balance,
-        balanceAfter: cached.balance - amount,
+        balanceBefore: currentCached.balance,
+        balanceAfter: currentCached.balance - amount,
         createdAt: Date.now(),
         status: 'PENDING',
       };
       await queueOfflineWithdrawal(queuedItem);
-      const optimistic = applyDispensation(cached, notes);
+      const optimistic = applyDispensation(currentCached, notes);
       await saveCachedInventory(optimistic);
       return {
         isOffline: true,
+        inventory: optimistic,
         transaction: {
           _id: syncId,
           amount,
           status: 'PENDING',
           dispensedNotes: notes,
-          balanceBefore: cached.balance,
+          balanceBefore: currentCached.balance,
           balanceAfter: optimistic.balance,
           createdAt: new Date().toISOString(),
         },

@@ -29,17 +29,23 @@ export function useATM() {
     mutationKey: [MUTATION_KEYS.WITHDRAW],
     mutationFn: (amount) => atmService.withdraw(amount),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVENTORY] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_COUNT] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS] });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
-
       if (data.isOffline) {
+        if (data.inventory) {
+          queryClient.setQueryData([QUERY_KEYS.INVENTORY], data.inventory);
+        }
+        queryClient.setQueryData([QUERY_KEYS.PENDING_COUNT], (prev = 0) => prev + 1);
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS] });
         toast.warning(
           'You are offline. This withdrawal is queued locally and will be synced when reconnected.',
           { toastId: 'offline-queue' }
         );
+        setLastWithdrawal(data.transaction);
+        setIsResultModalOpen(true);
       } else {
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.INVENTORY] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_COUNT] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.PENDING_TRANSACTIONS] });
+        queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.TRANSACTIONS] });
         toast.success('Cash dispensed successfully!');
         setLastWithdrawal(data.transaction);
         setIsResultModalOpen(true);
