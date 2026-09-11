@@ -3,21 +3,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { atmService } from '../services/atmService';
 import { toast } from 'react-toastify';
 import { QUERY_KEYS, MUTATION_KEYS } from '../utils/constants';
+import { useAuth } from '../context/AuthContext';
 
 export function useATM() {
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
   const [lastWithdrawal, setLastWithdrawal] = useState(null);
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
 
   const inventoryQuery = useQuery({
     queryKey: [QUERY_KEYS.INVENTORY],
     queryFn: atmService.getInventory,
+    enabled: isAuthenticated,
     staleTime: 30 * 1000,
   });
 
   const pendingCountQuery = useQuery({
     queryKey: [QUERY_KEYS.PENDING_COUNT],
     queryFn: atmService.getPendingCount,
+    enabled: isAuthenticated,
     refetchInterval: 5000,
   });
 

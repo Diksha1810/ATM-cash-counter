@@ -34,6 +34,11 @@ export const authService = {
       }
       return data.user;
     } catch (error) {
+      if (error.status === 401) {
+        await clearCachedUser();
+        throw error;
+      }
+
       const cached = await getCachedUser();
       if (cached) return cached;
       throw error;
