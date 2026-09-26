@@ -14,6 +14,19 @@ import { getIsOnline, setNetworkOnline } from '../utils/networkState';
 
 let syncInFlight = null;
 
+function withTimeout(promise, timeoutMs) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      const error = new Error('The server did not respond in time.');
+      error.code = 'ECONNABORTED';
+      reject(error);
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 function isConnectivityError(error) {
   // Always check live browser state first
   if (!navigator.onLine || !getIsOnline()) return true;
@@ -100,11 +113,18 @@ export const atmService = {
       };
     };
 
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setNetworkOnline(false);
+      return queueWithdrawal(await getCachedInventory());
+    }
     if (!getIsOnline()) return queueWithdrawal(await getCachedInventory());
 
     try {
       // 2.5 second timeout so turning off data falls back to offline queueing promptly
-      const data = await apiClient.post('/atm/withdraw', { amount, syncId }, { timeout: 2500 });
+      const data = await withTimeout(
+        apiClient.post('/atm/withdraw', { amount, syncId }, { timeout: 2000 }),
+        2500
+      );
       setNetworkOnline(true);
       if (data?.transaction) {
         apiClient
